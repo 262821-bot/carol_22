@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vida en Camino: Match y Desarrollo Fetal</title>
+<style>
+:root{--bg:#fdf3f6;--card:#fff;--tx:#2b2330;--mu:#7a6b80;--ac:#d6457a;--bd:#ecd7e0;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1620;--card:#2a2230;--tx:#f3eaf5;--mu:#b5a5bb;--ac:#ff6fa3;--bd:#43364a}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:480px;margin:0 auto;padding:14px}
+h1{font-size:1.25rem;margin:4px 0 2px;text-align:center}
+.sub{color:var(--mu);font-size:.85rem;text-align:center;margin-bottom:10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:12px;margin-bottom:12px}
+.stages{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.st{flex:0 0 auto;width:52px;text-align:center;font-size:.7rem;color:var(--mu);border:1px solid var(--bd);border-radius:12px;padding:6px 2px;background:var(--card);cursor:pointer}
+.st.on{border-color:var(--ac);color:var(--tx);font-weight:700}
+.st.lock{opacity:.45;cursor:not-allowed}
+.st span{display:block;font-size:1.3rem}
+.hud{display:flex;justify-content:space-between;font-weight:600;font-size:.9rem;margin-bottom:6px}
+.bar{height:8px;background:var(--bd);border-radius:6px;overflow:hidden;margin-bottom:10px}
+.bar i{display:block;height:100%;width:0;background:var(--ac);transition:width .3s}
+#g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;touch-action:manipulation}
+.t{aspect-ratio:1;border:2px solid transparent;border-radius:10px;font-size:clamp(1.1rem,5.5vw,1.7rem);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;padding:0;color:#222;transition:transform .15s,opacity .2s;line-height:1}
+.t small{font-size:.48rem;font-weight:700;margin-top:1px}
+.t.sel{border-color:var(--ac);transform:scale(1.1)}
+.t.clr{transform:scale(0);opacity:0}
+.leg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;font-size:.72rem;color:var(--mu);margin-top:8px}
+button.b{background:var(--ac);color:#fff;border:0;border-radius:12px;padding:10px 16px;font-weight:700;font-size:.95rem;cursor:pointer}
+button.b.o{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+.row{display:flex;gap:8px;justify-content:center;margin-top:10px}
+#m{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+#m.show{display:flex}
+.mb{background:var(--card);border-radius:20px;padding:20px;max-width:400px;width:100%;text-align:center;max-height:90%;overflow:auto}
+.fet{width:150px;height:150px;margin:6px auto;border-radius:50%;background:radial-gradient(circle,#ffd9e4,#f7a8c0);display:flex;align-items:center;justify-content:center;border:3px solid var(--ac)}
+.fet span{display:block;transition:font-size .6s}
+.tip{background:var(--bg);border-radius:12px;padding:10px;font-size:.82rem;text-align:left;margin:10px 0}
+.mb p{margin:6px 0;font-size:.9rem}
+.big{font-size:1.1rem;font-weight:700}
+.note{font-size:.7rem;color:var(--mu);text-align:center}
+</style></head><body><main>
+<h1>🌱 Vida en Camino</h1>
+<div class="sub">Combina anticonceptivos, supera retos y descubre cómo se desarrolla un bebé semana a semana.</div>
+<div class="card"><div class="stages" id="stages"></div></div>
+<div class="card">
+<div class="hud"><span id="lv"></span><span id="mv"></span><span id="sc"></span></div>
+<div class="bar"><i id="pb"></i></div>
+<div id="g"></div>
+<div class="leg" id="leg"></div>
+<div class="row"><button class="b o" id="shuf">🔀 Mezclar (−3 mov.)</button><button class="b o" id="rst">↺ Reiniciar</button></div>
+</div>
+<div class="note">Juego educativo. No sustituye la consulta con un profesional de salud sexual y reproductiva.</div>
+</main>
+<div id="m"><div class="mb" id="mb"></div></div>
+<script>
+const N=7;
+const TY=[
+{i:'💊',n:'Píldora',c:'#ffc8dd',d:'La píldora combinada se toma a diario. Eficacia con uso típico: ~93 %. No protege contra ITS.'},
+{i:'🩹',n:'Parche',c:'#ffe0b2',d:'El parche hormonal se cambia cada semana. Eficacia con uso típico: ~93 %. No protege contra ITS.'},
+{i:'💉',n:'Inyección',c:'#c8e6ff',d:'La inyección se aplica cada 1 a 3 meses según el tipo. Eficacia: ~96 %. No protege contra ITS.'},
+{i:'🛡️',n:'Condón',c:'#c9f2d4',d:'El condón es el único método que además reduce el riesgo de ITS, incluido el VIH. Eficacia con uso típico: ~87 %.'},
+{i:'T',n:'DIU',c:'#e3d4ff',d:'El DIU (de cobre u hormonal) dura de 3 a 10 años y es reversible. Eficacia: más del 99 %.'},
+{i:'💍',n:'Anillo',c:'#fff3b0',d:'El anillo vaginal se usa 3 semanas y se descansa 1. Eficacia con uso típico: ~93 %.'}];
+const ST=[
+{w:4,e:'🌱',s:'≈ 2 mm (semilla de amapola)',t:'Se forma el tubo neural, que será el cerebro y la médula espinal. Empieza a formarse el corazón.',z:34},
+{w:8,e:'🍓',s:'≈ 1,6 cm (frambuesa)',t:'El corazón ya late con fuerza. Se forman los dedos de manos y pies y los rasgos de la cara.',z:44},
+{w:12,e:'🍋',s:'≈ 5,4 cm (lima)',t:'Ya están formados los órganos principales. Aparecen reflejos: puede cerrar los puños y abrir la boca.',z:54},
+{w:16,e:'🥑',s:'≈ 11,6 cm (aguacate)',t:'Hace muecas y se chupa el dedo. Los huesos empiezan a endurecerse y el oído se desarrolla.',z:64},
+{w:20,e:'🍌',s:'≈ 25 cm (plátano)',t:'Los movimientos ya se pueden sentir. Su piel se cubre de vérnix, una capa protectora.',z:74},
+{w:28,e:'🍆',s:'≈ 37 cm (berenjena)',t:'Abre y cierra los ojos y reconoce sonidos. Los pulmones siguen madurando.',z:84},
+{w:36,e:'🥬',s:'≈ 47 cm (lechuga romana)',t:'Acumula grasa y suele colocarse con la cabeza hacia abajo. Sus pulmones están casi listos.',z:94},
+{w:40,e:'🍉',s:'≈ 51 cm y ~3,4 kg',t:'Embarazo a término: el bebé está listo para nacer. ¡Un proceso de 9 meses completado!',z:104}];
+let L=0,unl=0,B=[],score=0,moves=0,sel=null,busy=false;
+try{unl=Math.min(ST.length-1,+localStorage.getItem('vc_unl')||0)}catch(e){}
+const $=id=>document.getElementById(id);
+const goal=l=>600+l*350, MV=l=>22+Math.floor(l/2);
+const rnd=()=>Math.floor(Math.random()*TY.length);
+function stages(){$('stages').innerHTML=ST.map((s,i)=>`<div class="st ${i===L?'on':''} ${i>unl?'lock':''}" data-i="${i}"><span>${i>unl?'🔒':s.e}</span>Sem ${s.w}</div>`).join('');
+document.querySelectorAll('.st').forEach(e=>e.onclick=()=>{const i=+e.dataset.i;if(i<=unl){L=i;start()}})}
+function matches(){const s=new Set();
+for(let r=0;r<N;r++)for(let c=0;c<N-2;c++){const v=B[r][c];if(v>=0&&v===B[r][c+1]&&v===B[r][c+2])[0,1,2].forEach(k=>s.add(r*N+c+k))}
+for(let c=0;c<N;c++)for(let r=0;r<N-2;r++){const v=B[r][c];if(v>=0&&v===B[r+1][c]&&v===B[r+2][c])[0,1,2].forEach(k=>s.add((r+k)*N+c))}
+return s}
+function init(){do{B=Array.from({length:N},()=>Array.from({length:N},rnd))}while(matches().size||!hasMove())}
+function hasMove(){for(let r=0;r<N;r++)for(let c=0;c<N;c++)for(const[dr,dc]of[[0,1],[1,0]]){const r2=r+dr,c2=c+dc;if(r2<N&&c2<N){sw(r,c,r2,c2);const m=matches().size>0;sw(r,c,r2,c2);if(m)return true}}return false}
+function sw(a,b,c,d){const t=B[a][b];B[a][b]=B[c][d];B[c][d]=t}
+function draw(clr){const g=$('g');g.innerHTML='';
+for(let r=0;r<N;r++)for(let c=0;c<N;c++){const v=B[r][c],t=TY[v],b=document.createElement('button');
+b.className='t'+(sel&&sel[0]===r&&sel[1]===c?' sel':'')+(clr&&clr.has(r*N+c)?' clr':'');
+b.style.background=t.c;b.setAttribute('aria-label',t.n);
+b.innerHTML=(t.i==='T'?'<b style="font-size:1.3em">T</b>':t.i)+'<small>'+t.n+'</small>';
+b.onclick=()=>pick(r,c);g.appendChild(b)}
+$('lv').textContent='Semana '+ST[L].w;$('mv').textContent='Mov: '+moves;$('sc').textContent='⭐ '+score+'/'+goal(L);
+$('pb').style.width=Math.min(100,score/goal(L)*100)+'%'}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+async function pick(r,c){if(busy)return;
+if(!sel){sel=[r,c];draw();return}
+const[a,b]=sel;
+if(a===r&&b===c){sel=null;draw();return}
+if(Math.abs(a-r)+Math.abs(b-c)!==1){sel=[r,c];draw();return}
+sel=null;busy=true;sw(a,b,r,c);
+if(!matches().size){draw();await sleep(200);sw(a,b,r,c);draw();busy=false;return}
+moves--;await cascade();busy=false;check()}
+async function cascade(){let combo=1,m;
+while((m=matches()).size){score+=m.size*10*combo+(m.size>3?(m.size-3)*20:0);combo++;
+draw(m);await sleep(260);
+m.forEach(k=>B[Math.floor(k/N)][k%N]=-1);
+for(let c=0;c<N;c++){const col=[];for(let r=N-1;r>=0;r--)if(B[r][c]>=0)col.push(B[r][c]);
+while(col.length<N)col.push(rnd());for(let r=0;r<N;r++)B[N-1-r][c]=col[r]}
+draw();await sleep(180)}
+if(!hasMove()){do{B=Array.from({length:N},()=>Array.from({length:N},rnd))}while(matches().size||!hasMove());draw()}}
+function check(){draw();
+if(score>=goal(L)){win()}else if(moves<=0){lose()}}
+function modal(h){$('mb').innerHTML=h;$('m').classList.add('show')}
+function close(){$('m').classList.remove('show')}
+function win(){const s=ST[L],tip=TY[Math.floor(Math.random()*TY.length)];
+if(L===unl&&unl<ST.length-1){unl++;try{localStorage.setItem('vc_unl',unl)}catch(e){}}
+stages();
+modal(`<div class="big">🎉 ¡Reto superado!</div><p>Semana ${s.w} del embarazo</p>
+<div class="fet"><span id="fe" style="font-size:20px">${s.e}</span></div>
+<p class="big">${s.s}</p><p>${s.t}</p>
+<div class="tip"><b>💡 Dato de planificación: ${tip.n}</b><br>${tip.d}</div>
+<div class="row"><button class="b" id="nx">${L<ST.length-1?'Siguiente etapa ▶':'Jugar de nuevo'}</button><button class="b o" id="cl">Cerrar</button></div>`);
+setTimeout(()=>{const f=$('fe');if(f)f.style.fontSize=s.z+'px'},80);
+$('nx').onclick=()=>{close();L=L<ST.length-1?L+1:0;start()};$('cl').onclick=close}
+function lose(){modal(`<div class="big">😅 Se acabaron los movimientos</div><p>Te faltaron ${goal(L)-score} puntos. ¡Inténtalo otra vez!</p>
+<div class="row"><button class="b" id="rt">Reintentar</button></div>`);$('rt').onclick=()=>{close();start()}}
+function start(){score=0;moves=MV(L);sel=null;busy=false;init();stages();draw()}
+$('leg').innerHTML=TY.map(t=>`<span>${t.i==='T'?'<b>T</b>':t.i} ${t.n}</span>`).join('');
+$('rst').onclick=start;
+$('shuf').onclick=()=>{if(busy||moves<=3)return;moves-=3;do{B=Array.from({length:N},()=>Array.from({length:N},rnd))}while(matches().size||!hasMove());sel=null;draw()};
+start();
+</script></body></html>
